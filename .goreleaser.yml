@@ -56,5 +56,6 @@ brews:
   - repository:
       owner: yaogh99123
       name: homebrew-tap
+    directory: Formula
     homepage: "https://github.com/yaogh99123/homebrew-tap/"
     description: "A simple terminal UI for docker, written in Go"
