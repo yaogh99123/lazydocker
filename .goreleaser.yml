@@ -38,12 +38,7 @@ builds:
 archives:
   - builds:
       - binary
-    replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: x86
-      amd64: x86_64
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
         format: zip
@@ -63,7 +58,7 @@ changelog:
       - "^bump"
 
 brews:
-  - tap:
+  - repository:
       owner: jesseduffield
       name: homebrew-lazydocker
 
