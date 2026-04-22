@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write # 允许上传 assets 到 release
+  packages: write # 如果需要发布到 Docker GHCR
+  issues: write
+  pull-requests: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 必须获取所有历史记录以生成 Changelog
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 如果您需要自动更新 Homebrew Tap，建议在仓库设置中添加一个名为 GORELEASER_PAT 的 Secret
+          # 并将其填入下方，否则默认 TOKEN 权限可能不足以推送到其他仓库。
+          # GITHUB_TOKEN: ${{ secrets.GORELEASER_PAT || secrets.GITHUB_TOKEN }}
