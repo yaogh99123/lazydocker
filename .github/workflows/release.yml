@@ -4,21 +4,31 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type (minor, patch)'
+        type: choice
+        required: true
+        default: 'patch'
+        options:
+          - minor
+          - patch
 
 permissions:
-  contents: write # 允许上传 assets 到 release
-  packages: write # 如果需要发布到 Docker GHCR
+  contents: write
+  packages: write
   issues: write
   pull-requests: write
 
 jobs:
-  goreleaser:
+  check-and-release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 必须获取所有历史记录以生成 Changelog
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -26,14 +36,39 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
+      - name: Git Validator
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 获取最新标签，如果没有则默认为 v0.0.0
+          LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1) 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+          
+          # 解析版本号
+          IFS='.' read -r major minor patch <<< "${LATEST_TAG#v}"
+          
+          # 根据输入计算新版本
+          if [[ "${{ github.event.inputs.version_bump }}" == "minor" ]]; then
+            minor=$((minor + 1))
+            patch=0
+          else
+            patch=$((patch + 1))
+          fi
+          
+          NEW_TAG="v$major.$minor.$patch"
+          echo "New tag: $NEW_TAG"
+          
+          # 打标签并推送
+          git tag "$NEW_TAG" -a -m "Release $NEW_TAG"
+          git push origin "$NEW_TAG"
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
-          version: "~> v2"
+          version: v2
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # 如果您需要自动更新 Homebrew Tap，建议在仓库设置中添加一个名为 GORELEASER_PAT 的 Secret
-          # 并将其填入下方，否则默认 TOKEN 权限可能不足以推送到其他仓库。
-          # GITHUB_TOKEN: ${{ secrets.GORELEASER_PAT || secrets.GITHUB_TOKEN }}
