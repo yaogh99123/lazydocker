@@ -59,12 +59,12 @@ changelog:
 
 brews:
   - repository:
-      owner: jesseduffield
-      name: homebrew-lazydocker
+      owner: yaogh99123
+      name: homebrew-tap
 
     # Your app's homepage.
     # Default is empty.
-    homepage: "https://github.com/jesseduffield/lazydocker/"
+    homepage: "https://github.com/yaogh99123/homebrew-tap/"
 
     # Your app's description.
     # Default is empty.
