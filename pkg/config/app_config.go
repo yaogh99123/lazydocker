@@ -64,6 +64,24 @@ type UserConfig struct {
 	// will be filtered out and not displayed.
 	// Not documented because it's subject to change
 	Ignore []string `yaml:"ignore,omitempty"`
+
+	// Projects allows the user to define a list of projects that lazydocker will
+	// display in the projects panel. This is useful for projects that are not
+	// in the current directory
+	Projects []ProjectConfig `yaml:"projects,omitempty"`
+
+	// DevOS contains settings for the DevOS interactive CLI mode
+	DevOS DevOSConfig `yaml:"devOS,omitempty"`
+}
+
+type DevOSConfig struct {
+	DefaultComposeFiles []string `yaml:"defaultComposeFiles,omitempty"`
+}
+
+type ProjectConfig struct {
+	Name         string   `yaml:"name"`
+	ProjectDir   string   `yaml:"projectDir"`
+	ComposeFiles []string `yaml:"composeFiles"`
 }
 
 // ThemeConfig is for setting the colors of panels and some text.
@@ -489,10 +507,11 @@ type AppConfig struct {
 	ConfigDir   string
 	ProjectDir  string
 	ProjectName string
+	ComposeFiles []string
 }
 
 // NewAppConfig makes a new app config
-func NewAppConfig(name, version, commit, date string, buildSource string, debuggingFlag bool, composeFiles []string, projectDir string, projectName string) (*AppConfig, error) {
+func NewAppConfig(name, version, commit, date string, buildSource string, debuggingFlag bool, composeFiles []string, projectDir string, projectName string, isDevOS bool) (*AppConfig, error) {
 	configDir, err := findOrCreateConfigDir(name)
 	if err != nil {
 		return nil, err
@@ -501,6 +520,11 @@ func NewAppConfig(name, version, commit, date string, buildSource string, debugg
 	userConfig, err := loadUserConfigWithDefaults(configDir)
 	if err != nil {
 		return nil, err
+	}
+
+	// If no compose files provided and we are in DevOS mode, use defaults from config
+	if len(composeFiles) == 0 && isDevOS && len(userConfig.DevOS.DefaultComposeFiles) > 0 {
+		composeFiles = userConfig.DevOS.DefaultComposeFiles
 	}
 
 	// Pass compose files as individual -f flags to docker compose
@@ -517,8 +541,9 @@ func NewAppConfig(name, version, commit, date string, buildSource string, debugg
 		BuildSource: buildSource,
 		UserConfig:  userConfig,
 		ConfigDir:   configDir,
-		ProjectDir:  projectDir,
-		ProjectName: projectName,
+		ProjectDir:   projectDir,
+		ProjectName:  projectName,
+		ComposeFiles: composeFiles,
 	}
 
 	return appConfig, nil
@@ -534,6 +559,23 @@ func configDirForVendor(vendor string, projectName string) string {
 }
 
 func configDir(projectName string) string {
+	// 1. 最高优先级：~/.config/lazydocker (Linux 风格/开发者偏好)
+	if home, err := os.UserHomeDir(); err == nil {
+		dotConfigDir := filepath.Join(home, ".config", projectName)
+		if _, err := os.Stat(filepath.Join(dotConfigDir, "config.yml")); err == nil {
+			return dotConfigDir
+		}
+	}
+
+	// 2. 第二优先级：当前目录下的 ./config 文件夹
+	localConfigDir := "./config"
+	if _, err := os.Stat(filepath.Join(localConfigDir, "config.yml")); err == nil {
+		if absPath, err := filepath.Abs(localConfigDir); err == nil {
+			return absPath
+		}
+	}
+
+	// 3. 第三优先级：系统默认路径 (Library/Application Support 等)
 	legacyConfigDirectory := configDirForVendor("jesseduffield", projectName)
 	if _, err := os.Stat(legacyConfigDirectory); !os.IsNotExist(err) {
 		return legacyConfigDirectory

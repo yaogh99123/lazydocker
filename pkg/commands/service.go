@@ -13,6 +13,7 @@ import (
 type Service struct {
 	Name          string
 	ID            string
+	Description   string
 	ProjectName   string
 	OSCommand     *OSCommand
 	Log           *logrus.Entry

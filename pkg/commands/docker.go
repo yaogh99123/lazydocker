@@ -301,6 +301,7 @@ func (c *DockerCommand) GetServicesFromContainers(containers []*Container) []*Se
 		services = append(services, &Service{
 			Name:          ctr.ServiceName,
 			ID:            ctr.ProjectName + "-" + ctr.ServiceName,
+			Description:   ctr.Container.Labels["devos.description"],
 			ProjectName:   ctr.ProjectName,
 			OSCommand:     c.OSCommand,
 			Log:           c.Log,
@@ -436,26 +437,40 @@ func (c *DockerCommand) GetServices() ([]*Service, error) {
 	}
 
 	composeCommand := c.Config.UserConfig.CommandTemplates.DockerCompose
-	output, err := c.OSCommand.RunCommandWithOutput(fmt.Sprintf("%s config --services", composeCommand))
+	output, err := c.OSCommand.RunCommandWithOutput(fmt.Sprintf("%s config --format json", composeCommand))
 	if err != nil {
 		return nil, err
 	}
 
-	// output looks like:
-	// service1
-	// service2
+	var config struct {
+		Services map[string]struct {
+			Labels map[string]string `json:"labels"`
+		} `json:"services"`
+	}
 
-	lines := utils.SplitLines(output)
-	services := make([]*Service, len(lines))
-	for i, str := range lines {
-		services[i] = &Service{
-			Name:          str,
-			ID:            c.LocalProjectName + "-" + str,
+	if err := json.Unmarshal([]byte(output), &config); err != nil {
+		return nil, err
+	}
+
+	services := make([]*Service, 0, len(config.Services))
+	// Sort service names for stability
+	names := make([]string, 0, len(config.Services))
+	for name := range config.Services {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		svcConfig := config.Services[name]
+		services = append(services, &Service{
+			Name:          name,
+			ID:            c.LocalProjectName + "-" + name,
+			Description:   svcConfig.Labels["devos.description"],
 			ProjectName:   c.LocalProjectName,
 			OSCommand:     c.OSCommand,
 			Log:           c.Log,
 			DockerCommand: c,
-		}
+		})
 	}
 
 	return services, nil

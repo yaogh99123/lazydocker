@@ -30,6 +30,7 @@ var (
 	debuggingFlag = false
 	composeFiles  []string
 	projectName   string
+	devosFlag     = false
 )
 
 func main() {
@@ -53,6 +54,7 @@ func main() {
 	flaggy.Bool(&debuggingFlag, "d", "debug", "a boolean")
 	flaggy.StringSlice(&composeFiles, "f", "file", "Specify alternate compose files")
 	flaggy.String(&projectName, "p", "project", "Specify a docker compose project name")
+	flaggy.Bool(&devosFlag, "o", "devos", "Run in DevOS interactive mode")
 	flaggy.SetVersion(info)
 
 	flaggy.Parse()
@@ -73,14 +75,18 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	appConfig, err := config.NewAppConfig("lazydocker", version, commit, date, buildSource, debuggingFlag, composeFiles, projectDir, projectName)
+	appConfig, err := config.NewAppConfig("lazydocker", version, commit, date, buildSource, debuggingFlag, composeFiles, projectDir, projectName, devosFlag)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
 	app, err := app.NewApp(appConfig)
 	if err == nil {
-		err = app.Run()
+		if devosFlag {
+			err = app.RunDevOSMode()
+		} else {
+			err = app.Run()
+		}
 	}
 	app.Close()
 
