@@ -533,14 +533,14 @@ func NewAppConfig(name, version, commit, date string, buildSource string, debugg
 	}
 
 	appConfig := &AppConfig{
-		Name:        name,
-		Version:     version,
-		Commit:      commit,
-		BuildDate:   date,
-		Debug:       debuggingFlag || os.Getenv("DEBUG") == "TRUE",
-		BuildSource: buildSource,
-		UserConfig:  userConfig,
-		ConfigDir:   configDir,
+		Name:         name,
+		Version:      version,
+		Commit:       commit,
+		BuildDate:    date,
+		Debug:        debuggingFlag || os.Getenv("DEBUG") == "TRUE",
+		BuildSource:  buildSource,
+		UserConfig:   userConfig,
+		ConfigDir:    configDir,
 		ProjectDir:   projectDir,
 		ProjectName:  projectName,
 		ComposeFiles: composeFiles,

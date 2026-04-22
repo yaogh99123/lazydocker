@@ -181,8 +181,7 @@ func (app *App) handleDevOSInput(choice string, services []*commands.Service, re
 		app.doServiceAction("编译(更新服务)", services, reader, true, false, func(s *commands.Service) error {
 			composeCommand := app.getComposeCommandWithFiles()
 			// 先 pull 确保镜像最新，再 build。通过 grep 过滤掉没必要的警告信息。
-			fullCmd := fmt.Sprintf("%s pull %s && %s build --no-cache %s 2>&1 | grep -v 'No services to build' || true", 
-				composeCommand, s.Name, composeCommand, s.Name)
+			fullCmd := fmt.Sprintf("%s pull %s && %s build --no-cache %s 2>&1 | grep -v 'No services to build' || true", composeCommand, s.Name, composeCommand, s.Name)
 			cmd := exec.Command("sh", "-c", fullCmd)
 			_ = app.runSubprocessWithQuitKey(cmd)
 			return nil
