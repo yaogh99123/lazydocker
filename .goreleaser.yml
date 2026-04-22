@@ -53,7 +53,7 @@ changelog:
 
 # Homebrew 配置 (已更正为 v2 规范)
 brews:
-  - tap:
+  - repository:
       owner: yaogh99123
       name: homebrew-tap
     homepage: "https://github.com/yaogh99123/homebrew-tap/"
