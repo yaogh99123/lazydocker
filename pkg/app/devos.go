@@ -137,7 +137,8 @@ func (app *App) handleDevOSInput(choice string, services []*commands.Service, re
 			if err != nil {
 				return err
 			}
-			return app.runSubprocessWithQuitKey(cmd)
+			_ = app.runSubprocessWithQuitKey(cmd)
+			return nil
 		})
 	case "5":
 		app.doServiceAction("查看状态", services, reader, false, false, func(s *commands.Service) error {
@@ -145,7 +146,8 @@ func (app *App) handleDevOSInput(choice string, services []*commands.Service, re
 			composeCommand := app.getComposeCommandWithFiles()
 			fullCmd := fmt.Sprintf("%s ps %s", composeCommand, s.Name)
 			cmd := exec.Command("sh", "-c", fullCmd)
-			return app.runSubprocessWithQuitKey(cmd)
+			_ = app.runSubprocessWithQuitKey(cmd)
+			return nil
 		})
 	case "6":
 		app.doServiceAction("查看配置", services, reader, false, false, func(s *commands.Service) error {
@@ -153,7 +155,8 @@ func (app *App) handleDevOSInput(choice string, services []*commands.Service, re
 			composeCommand := app.getComposeCommandWithFiles()
 			fullCmd := fmt.Sprintf("%s config %s", composeCommand, s.Name)
 			cmd := exec.Command("sh", "-c", fullCmd)
-			return app.runSubprocessWithQuitKey(cmd)
+			_ = app.runSubprocessWithQuitKey(cmd)
+			return nil
 		})
 	case "7":
 		app.doServiceAction("进入容器", services, reader, false, false, func(s *commands.Service) error {
@@ -161,7 +164,7 @@ func (app *App) handleDevOSInput(choice string, services []*commands.Service, re
 				return fmt.Errorf("服务 %s 未运行", s.Name)
 			}
 			fmt.Printf("%s--- 正在进入容器: %s (输入 'exit' 退出) ---%s\n", ColorBlue, s.Name, ColorNC)
-			
+
 			// 1. 先静默探测是否存在 bash
 			checkCmd := exec.Command("docker", "exec", s.Container.ID, "which", "bash")
 			if err := checkCmd.Run(); err == nil {
@@ -181,7 +184,8 @@ func (app *App) handleDevOSInput(choice string, services []*commands.Service, re
 			fullCmd := fmt.Sprintf("%s pull %s && %s build --no-cache %s 2>&1 | grep -v 'No services to build' || true", 
 				composeCommand, s.Name, composeCommand, s.Name)
 			cmd := exec.Command("sh", "-c", fullCmd)
-			return app.runSubprocessWithQuitKey(cmd)
+			_ = app.runSubprocessWithQuitKey(cmd)
+			return nil
 		})
 	case "9":
 		app.doServiceAction("清理", services, reader, true, true, func(s *commands.Service) error {
@@ -207,7 +211,8 @@ func (app *App) handleDevOSInput(choice string, services []*commands.Service, re
 			imageID := s.Container.Container.ImageID
 			fmt.Printf("%s正在删除服务 %s 的镜像 (ID: %s)...%s\n", ColorYellow, s.Name, imageID, ColorNC)
 			cmd := exec.Command("docker", "rmi", "-f", imageID)
-			return app.runSubprocessWithQuitKey(cmd)
+			_ = app.runSubprocessWithQuitKey(cmd)
+			return nil
 		})
 	case "11":
 		stack := []string{"zookeeper", "kafka", "elasticsearch", "filebeat", "go-stash", "jaeger", "grafana"}
@@ -218,12 +223,11 @@ func (app *App) handleDevOSInput(choice string, services []*commands.Service, re
 	case "13":
 		fmt.Printf("\n%s正在清理 Docker 构建缓存...%s\n", ColorBlue, ColorNC)
 		cmd := exec.Command("docker", "builder", "prune", "-f")
-		app.runSubprocessWithQuitKey(cmd)
+		_ = app.runSubprocessWithQuitKey(cmd)
 	case "14":
 		fmt.Printf("\n%s正在清理 Docker 构建历史(含 buildx)...%s\n", ColorBlue, ColorNC)
-		// buildx 通常使用 builder prune 即可，-a 清理所有，--force 强制执行
 		cmd := exec.Command("docker", "builder", "prune", "-af")
-		app.runSubprocessWithQuitKey(cmd)
+		_ = app.runSubprocessWithQuitKey(cmd)
 	case "15":
 		app.runNetworkManagement(reader)
 	case "16":
@@ -232,13 +236,13 @@ func (app *App) handleDevOSInput(choice string, services []*commands.Service, re
 		app.doServiceAction("修复", services, reader, true, false, func(s *commands.Service) error {
 			fmt.Printf("%s正在全面修复服务: %s...%s\n", ColorYellow, s.Name, ColorNC)
 			if s.Container != nil {
-				s.Stop()
-				s.Remove(container.RemoveOptions{Force: true})
-				exec.Command("docker", "rmi", "-f", s.Container.Container.ImageID).Run()
+				_ = s.Stop()
+				_ = s.Remove(container.RemoveOptions{Force: true})
+				_ = exec.Command("docker", "rmi", "-f", s.Container.Container.ImageID).Run()
 			}
 			composeCommand := app.getComposeCommandWithFiles()
 			buildCmd := fmt.Sprintf("%s build --no-cache %s", composeCommand, s.Name)
-			exec.Command("sh", "-c", buildCmd).Run()
+			_ = exec.Command("sh", "-c", buildCmd).Run()
 			return s.Up()
 		})
 	}
@@ -297,7 +301,7 @@ func (app *App) doServiceAction(actionName string, services []*commands.Service,
 
 	if waitForEnter {
 		fmt.Printf("\n%s按 Enter 继续...%s", ColorYellow, ColorNC)
-		reader.ReadString('\n')
+		_, _ = reader.ReadString('\n')
 	}
 }
 
@@ -328,7 +332,7 @@ func (app *App) runStackAction(stackName string, stack []string, services []*com
 
 	for _, s := range targets {
 		fmt.Printf("启动 %s...\n", s.Name)
-		s.Up()
+		_ = s.Up()
 	}
 }
 
@@ -379,12 +383,12 @@ func (app *App) runSubprocessWithQuitKey(cmd *exec.Cmd) error {
 		goto WAIT_LOOP
 	case <-quitChan:
 		// 收到 exit 命令，如果子进程还在跑，就杀掉它
-		cmd.Process.Signal(os.Interrupt)
+		_ = cmd.Process.Signal(os.Interrupt)
 		fmt.Printf("\n%s正在返回主菜单...%s\n", ColorBlue, ColorNC)
 		select {
 		case <-done:
 		case <-time.After(500 * time.Millisecond):
-			cmd.Process.Kill()
+			_ = cmd.Process.Kill()
 		}
 		return nil
 	}
@@ -434,12 +438,12 @@ func (app *App) runInteractiveSubprocess(cmd *exec.Cmd) error {
 		return err
 	case <-sigChan:
 		// 收到信号时，将信号发给子进程
-		cmd.Process.Signal(os.Interrupt)
+		_ = cmd.Process.Signal(os.Interrupt)
 		// 等待子进程退出
 		select {
 		case <-done:
 		case <-time.After(1 * time.Second):
-			cmd.Process.Kill()
+			_ = cmd.Process.Kill()
 		}
 		return nil
 	}
@@ -492,7 +496,7 @@ func (app *App) runNetworkManagement(reader *bufio.Reader) {
 			fmt.Print("请输入要删除的网络索引: ")
 			idxStr, _ := reader.ReadString('\n')
 			var idx int
-			fmt.Sscanf(strings.TrimSpace(idxStr), "%d", &idx)
+			_, _ = fmt.Sscanf(strings.TrimSpace(idxStr), "%d", &idx)
 			if idx > 0 && idx <= len(networks) {
 				nw := networks[idx-1]
 				fmt.Printf("%s正在删除网络 %s...%s\n", ColorYellow, nw.Name, ColorNC)
@@ -531,7 +535,7 @@ func (app *App) handleNetworkConnection(reader *bufio.Reader, networks []*comman
 	fmt.Printf("\n选择要%s的网络索引: ", action)
 	idxStr, _ := reader.ReadString('\n')
 	var netIdx int
-	fmt.Sscanf(strings.TrimSpace(idxStr), "%d", &netIdx)
+	_, _ = fmt.Sscanf(strings.TrimSpace(idxStr), "%d", &netIdx)
 	if netIdx <= 0 || netIdx > len(networks) {
 		fmt.Printf("%s无效的索引%s\n", ColorRed, ColorNC)
 		return
@@ -552,7 +556,7 @@ func (app *App) handleNetworkConnection(reader *bufio.Reader, networks []*comman
 	fmt.Printf("\n选择要%s网络的容器索引: ", action)
 	cIdxStr, _ := reader.ReadString('\n')
 	var cIdx int
-	fmt.Sscanf(strings.TrimSpace(cIdxStr), "%d", &cIdx)
+	_, _ = fmt.Sscanf(strings.TrimSpace(cIdxStr), "%d", &cIdx)
 	if cIdx <= 0 || cIdx > len(containers) {
 		fmt.Printf("%s无效的索引%s\n", ColorRed, ColorNC)
 		return
@@ -607,7 +611,7 @@ func (app *App) runVolumeManagement(reader *bufio.Reader) {
 			fmt.Print("请输入要删除的卷索引: ")
 			idxStr, _ := reader.ReadString('\n')
 			var idx int
-			fmt.Sscanf(strings.TrimSpace(idxStr), "%d", &idx)
+			_, _ = fmt.Sscanf(strings.TrimSpace(idxStr), "%d", &idx)
 			if idx > 0 && idx <= len(volumes) {
 				vol := volumes[idx-1]
 				fmt.Printf("%s正在删除卷 %s...%s\n", ColorYellow, vol.Name, ColorNC)

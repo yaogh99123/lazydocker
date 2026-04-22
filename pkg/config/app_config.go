@@ -497,16 +497,16 @@ func GetDefaultConfig() UserConfig {
 
 // AppConfig contains the base configuration fields required for lazydocker.
 type AppConfig struct {
-	Debug       bool   `long:"debug" env:"DEBUG" default:"false"`
-	Version     string `long:"version" env:"VERSION" default:"unversioned"`
-	Commit      string `long:"commit" env:"COMMIT"`
-	BuildDate   string `long:"build-date" env:"BUILD_DATE"`
-	Name        string `long:"name" env:"NAME" default:"lazydocker"`
-	BuildSource string `long:"build-source" env:"BUILD_SOURCE" default:""`
-	UserConfig  *UserConfig
-	ConfigDir   string
-	ProjectDir  string
-	ProjectName string
+	Debug        bool   `long:"debug" env:"DEBUG" default:"false"`
+	Version      string `long:"version" env:"VERSION" default:"unversioned"`
+	Commit       string `long:"commit" env:"COMMIT"`
+	BuildDate    string `long:"build-date" env:"BUILD_DATE"`
+	Name         string `long:"name" env:"NAME" default:"lazydocker"`
+	BuildSource  string `long:"build-source" env:"BUILD_SOURCE" default:""`
+	UserConfig   *UserConfig
+	ConfigDir    string
+	ProjectDir   string
+	ProjectName  string
 	ComposeFiles []string
 }
 
